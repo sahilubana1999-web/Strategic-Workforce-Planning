@@ -112,17 +112,20 @@ uploaded_file = st.file_uploader("Choose CSV file", type="csv")
 required_cols = ['date', 'output', 'employees']
 
 # --- Corrected Data Loading Logic ---
+# --- Required Data Upload (no sample fallback) ---
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        st.error(f"Missing required columns: {', '.join(missing_cols)}. Using sample data instead.")
-        df = make_sample_data(48)
+        st.error(f"❌ Missing required columns: {', '.join(missing_cols)}. Please upload a valid dataset.")
+        st.stop()
     else:
-        st.success("File uploaded successfully!")
+        st.success("✅ File uploaded successfully!")
 else:
-    st.info("No file uploaded. Using a sample dataset.")
-    df = make_sample_data(48)
+    st.error("⚠️ You must upload a dataset (CSV) with required columns to continue.")
+    st.stop()
+# --- End of Required Data Upload ---
+
 # --- End of Corrected Data Loading Logic ---
 
 # Normalize columns and types after loading data

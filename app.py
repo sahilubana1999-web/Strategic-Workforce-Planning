@@ -248,8 +248,13 @@ fig.update_layout(height=400, xaxis_title="Date", yaxis_title="Output (units)")
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Required manpower (forecasted) vs available")
-fig2 = px.line(fc_df, x='date', y='required_manpower', labels={'required_manpower':'Required manpower (headcount)'}, name='Required manpower (forecasted)')
+fig2 = px.line(fc_df, x='date', y='required_manpower', labels={'required_manpower':'Required manpower (headcount)'})
+fig2.data[0].name = 'Required manpower (forecasted)'
 fig2.add_scatter(x=fc_df['date'], y=fc_df['available_workforce'], mode='lines+markers', name='Available workforce')
+
+# Fix: Set the name for the required_manpower trace after the figure is created
+fig2.data[0].name = 'Required manpower (forecasted)'
+
 fig2.update_layout(height=400)
 st.plotly_chart(fig2, use_container_width=True)
 

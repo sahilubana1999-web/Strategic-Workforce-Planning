@@ -262,7 +262,8 @@ if uploaded_file is not None:
     hist_emp_dict = dict(zip(df['date'], df['employees']))
     
     # Assign available_workforce per month
-    fc_df['available_workforce'] = fc_df['date'].map(hist_emp_dict).fillna(df['employees'].iloc[-1])
+    fc_df['available_workforce'] = fc_df['date'].map(hist_emp_dict).fillna(available_workforce)
+
     
     # Compute workforce gap
     fc_df['gap'] = fc_df['required_manpower'] - fc_df['available_workforce']

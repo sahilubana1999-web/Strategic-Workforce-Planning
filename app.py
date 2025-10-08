@@ -327,13 +327,70 @@ if uploaded_file is not None:
     # --------------
     # Interpretation & next steps
     # --------------
-    st.header("4) Interpretation & HR actions (how managers use this)")
+    # --------------
+# Interpretation & next steps (Dynamic)
+# --------------
+
+st.header("4) Interpretation & HR Insights (Dynamic Analysis)")
+
+# --- Compute key averages ---
+avg_gap = fc_df['gap'].mean()
+avg_required = fc_df['required_manpower'].mean()
+avg_available = fc_df['available_workforce'].mean()
+
+# --- Determine overall workforce trend ---
+if avg_gap > 0:
+    st.subheader("📉 Workforce Shortage Detected")
+    st.markdown(f"""
+    - On average, your organization is short by **{avg_gap:.1f} employees per month**.
+    - Forecast indicates an upcoming shortage in workforce capacity, which may impact productivity and service delivery.
+    - **Recommended Actions:** Initiate recruitment drives, consider contract staffing, or increase employee productivity through training and upskilling.
+    """)
+elif avg_gap < 0:
+    st.subheader("📈 Potential Overstaffing Observed")
+    st.markdown(f"""
+    - The model predicts a manpower surplus averaging **{abs(avg_gap):.1f} employees per month**.
+    - This may lead to higher labor costs and reduced efficiency.
+    - **Recommended Actions:** Optimize manpower allocation, adjust hiring pace, or explore cross-department utilization.
+    """)
+else:
+    st.subheader("⚖️ Workforce Balanced")
     st.markdown("""
-    - **If gap > 0 (shortage)**: model suggests hiring, temp-staffing, overtime, or outsourcing. Use the lost-profit estimate to compare the cost of hiring vs the cost of lost sales.
-    - **If gap < 0 (excess)**: examine ways to reassign, reduce hours, or slow hiring. Overstaffing cost quantifies monthly carrying cost of surplus headcount.
-    - **Scenario planning**: change productivity assumption (e.g., invest in training -> raise productivity), or simulate hiring lead times and cost of hiring.
+    - Current forecasts suggest manpower demand matches available workforce.
+    - Continue monitoring productivity levels and financial performance for early signs of deviation.
     """)
 
+# --- Financial comparison logic ---
+st.subheader("💰 Financial Risk Assessment")
+
+if total_overstaff_cost > total_understaff_lost_profit:
+    st.info(f"""
+    The **overstaffing cost ({total_overstaff_cost:,.0f})** exceeds the potential lost profit due to shortages ({total_understaff_lost_profit:,.0f}).
+    This indicates that maintaining extra workforce may not be cost-efficient.  
+    **Recommendation:** Optimize hiring plans or shift workloads to improve utilization.
+    """)
+elif total_overstaff_cost < total_understaff_lost_profit:
+    st.warning(f"""
+    The **lost profit from understaffing ({total_understaff_lost_profit:,.0f})** is higher than overstaffing costs ({total_overstaff_cost:,.0f}).
+    This suggests that having insufficient staff poses a greater financial risk.  
+    **Recommendation:** Plan strategic hiring or temporary staffing to safeguard revenue.
+    """)
+else:
+    st.success("""
+    Overstaffing and understaffing costs are currently balanced.
+    The organization’s workforce strategy appears financially optimized — maintain current levels while monitoring market shifts.
+    """)
+
+# --- Strategic conclusion ---
+st.markdown("---")
+st.markdown("""
+### 🧭 Managerial Interpretation:
+This AI-driven model automatically tailors insights to your dataset, showing whether your organization faces a **workforce surplus or shortage** and quantifying its **financial implications**.
+Managers can use this for:
+- **Hiring & Training Decisions** – Align manpower with forecasted output.
+- **Cost Control** – Minimize unnecessary labor expenses.
+- **Scenario Planning** – Test productivity or salary changes and observe impact on future workforce needs.
+""")
     st.markdown("""
     **Note on assumptions:** productivity is computed as average monthly output per employee (or can be entered manually). Lost-sales factor and gross margin are user inputs and should be informed by operations data.
     """)

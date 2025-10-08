@@ -34,7 +34,6 @@ then review workforce gaps and cost implications.
 # -----------------------
 st.sidebar.header("Configuration")
 
-# --- Use session state to manage the selected option's state ---
 if 'prod_method_radio' not in st.session_state:
     st.session_state['prod_method_radio'] = "Use recent observed (avg)"
 
@@ -46,13 +45,11 @@ st.sidebar.radio(
     key="prod_method_radio"
 )
 
-# Use the state to control the UI and logic
 is_manual_input = (st.session_state['prod_method_radio'] == "Manual input")
 disabled_state = not is_manual_input
 
 recent_months = st.sidebar.slider("If using observed: months to average", 3, 24, 6, disabled=is_manual_input)
 
-# The manual input box is now permanent and its 'disabled' state is controlled by the radio button choice
 manual_prod_value = st.sidebar.number_input(
     "Manual productivity (output per employee per month)",
     value=20.0, 
@@ -67,11 +64,9 @@ benefits_pct = st.sidebar.slider("Benefits as % of salary", 0.0, 1.0, 0.25)
 gross_margin = st.sidebar.slider("Estimated gross margin (for lost-profit calc)", 0.0, 1.0, 0.30)
 lost_sales_factor = st.sidebar.slider("Lost-sales factor per missing employee (0-1)", 0.0, 1.0, 0.5)
 
-# --- 📘 Glossary Section ---
 with st.sidebar.expander("ℹ️ Help / Glossary of Terms"):
     st.markdown("""
     ### Key Terms Explained
-
     - **Configuration**: Settings that control how the forecast is generated.
     - **Forecast Horizon (months)**: Number of future months to predict manpower needs.
     - **Productivity per Employee (monthly)**: Average output one employee delivers per month.
@@ -103,7 +98,6 @@ Optional columns for advanced metrics:
 Make sure the data is chronological (oldest to latest) and monthly.
 """)
 
-# Define a function to generate sample data
 def make_sample_data(num_months):
     dates = pd.date_range(end=datetime.now(), periods=num_months, freq='M')
     output = np.linspace(1000, 1000 + num_months * 50, num_months) + np.random.normal(0, 50, num_months)
@@ -118,7 +112,6 @@ def make_sample_data(num_months):
         'revenue': revenue
     })
 
-# Optional: downloadable sample CSV and logic to use it as default
 sample_data = make_sample_data(48)
 csv_buffer = io.StringIO()
 sample_data.to_csv(csv_buffer, index=False)
@@ -130,10 +123,8 @@ st.download_button(
 )
 
 uploaded_file = st.file_uploader("Choose CSV file", type="csv")
-
 required_cols = ['date', 'output', 'employees']
 
-# --- Corrected Data Loading and Processing Logic ---
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     missing_cols = [col for col in required_cols if col not in df.columns]
@@ -143,22 +134,15 @@ if uploaded_file is not None:
     else:
         st.success("✅ File uploaded successfully!")
 
-    # Normalize columns and types only after a file is successfully uploaded
     df['date'] = pd.to_datetime(df['date'])
-
-    # Quick preview
     st.dataframe(df.sort_values('date').tail(12).reset_index(drop=True))
 
     # -----------------------
     # Compute productivity
     # -----------------------
     st.header("2) Productivity, Required Manpower, and Forecast")
-
-    # compute observed productivity (monthly output per employee)
     df = df.sort_values('date').reset_index(drop=True)
-    df['avg_employees'] = df['employees']
 
-    # Use the state to decide which productivity value to use
     if is_manual_input:
         prod = manual_prod_value
         st.sidebar.write(f"Manual productivity set to: {prod:.2f} output / employee / month")
@@ -173,13 +157,12 @@ if uploaded_file is not None:
             prod = avg_output_month / avg_emp_month
             st.sidebar.write(f"Observed productivity (avg last {recent_months} months): {prod:.2f} output / employee / month")
 
-    # choose available workforce: latest known or manual override
     latest_emp = int(df['employees'].iloc[-1])
-    available_workforce = st.sidebar.number_input("Available workforce (current headcount)", min_value=1, value=latest_emp)
+    current_workforce = st.sidebar.number_input("Available workforce (current headcount)", min_value=1, value=latest_emp)
     st.sidebar.write(f"Latest dataset headcount = {latest_emp}")
 
     # -----------------------
-    # Forecasting function
+    # Forecasting functions
     # -----------------------
     def forecast_prophet(df_in, months):
         if Prophet is None:
@@ -196,7 +179,6 @@ if uploaded_file is not None:
         if ARIMA is None:
             raise ImportError("statsmodels not installed or ARIMA not available.")
         series = df_in.set_index('date')['output'].asfreq('M')
-        # simple ARIMA(1,1,1) as a starting point
         model = ARIMA(series, order=(1,1,1))
         fitted = model.fit()
         pred = fitted.get_forecast(steps=months)
@@ -209,11 +191,9 @@ if uploaded_file is not None:
             'yhat_lower': conf.iloc[:,0].values,
             'yhat_upper': conf.iloc[:,1].values
         })
-        # include history as well for plotting convenience
         return res
 
     def forecast_linear(df_in, months):
-        # simple linear trend on time index
         df_tmp = df_in.copy()
         df_tmp['t'] = np.arange(len(df_tmp))
         X = df_tmp[['t']]
@@ -226,38 +206,29 @@ if uploaded_file is not None:
         res = pd.DataFrame({'date': idx, 'yhat_output': yhat, 'yhat_lower': yhat*0.9, 'yhat_upper': yhat*1.1})
         return res
 
-    # run forecasting
+    # Run forecasting
     if model_choice.startswith("Prophet"):
         try:
             fc_df = forecast_prophet(df, horizon_months)
         except Exception as e:
             st.error(f"Prophet forecasting failed: {e}")
-            st.info("Try ARIMA or Linear Regression, or install Prophet (`pip install prophet`).")
             fc_df = forecast_linear(df, horizon_months)
     elif model_choice.startswith("ARIMA"):
         try:
             fc_df = forecast_arima(df, horizon_months)
         except Exception as e:
             st.error(f"ARIMA forecasting failed: {e}")
-            st.info("Falling back to linear regression.")
             fc_df = forecast_linear(df, horizon_months)
     else:
         fc_df = forecast_linear(df, horizon_months)
 
-    # prepare forecasting table for display: last history + forecast tail
-    hist = df[['date','output']].rename(columns={'output':'y'})
-    hist = hist.set_index('date')
-    fc_plot = fc_df.set_index('date')
-    combined = pd.concat([hist, fc_plot[['yhat_output']].rename(columns={'yhat_output':'yhat'})], axis=0).reset_index()
-
-    # compute required manpower per month
-    fc_df = fc_df.copy()
-    fc_df['required_manpower'] = (fc_df['yhat_output'] / prod).apply(lambda x: np.nan if x==np.inf else x)
-    fc_df['available_workforce'] = available_workforce
-    fc_df['gap'] = fc_df['required_manpower'] - fc_df['available_workforce']
+    # Compute required manpower for forecast only
+    fc_df['required_manpower'] = fc_df['yhat_output'] / prod
+    fc_df['gap'] = fc_df['required_manpower'] - current_workforce
+    fc_df['available_workforce'] = current_workforce
 
     # -----------------------
-    # Visualizations
+    # Visualization
     # -----------------------
     st.subheader("Forecast: output (historical + forecast)")
     fig = px.line()
@@ -268,12 +239,7 @@ if uploaded_file is not None:
 
     st.subheader("Required manpower (forecasted) vs available")
     fig2 = px.line(fc_df, x='date', y='required_manpower', labels={'required_manpower':'Required manpower (headcount)'})
-    fig2.data[0].name = 'Required manpower (forecasted)'
     fig2.add_scatter(x=fc_df['date'], y=fc_df['available_workforce'], mode='lines+markers', name='Available workforce')
-
-    # Fix: Set the name for the required_manpower trace after the figure is created
-    fig2.data[0].name = 'Required manpower (forecasted)'
-
     fig2.update_layout(height=400)
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -283,21 +249,18 @@ if uploaded_file is not None:
     st.plotly_chart(fig3, use_container_width=True)
 
     # -----------------------
-    # Financial impact calculations
+    # Financial impact
     # -----------------------
     st.header("3) Financial impact of staffing errors")
 
-    monthly_salary = avg_annual_salary / 12.0
-    monthly_salary_with_benefits = monthly_salary * (1.0 + benefits_pct)
+    monthly_salary = avg_annual_salary / 12
+    monthly_salary_with_benefits = monthly_salary * (1 + benefits_pct)
 
-    # revenue per employee estimate (use latest month if available)
-    if 'revenue' in df.columns and not df['employees'].iloc[-1] == 0:
+    if 'revenue' in df.columns and df['employees'].iloc[-1] != 0:
         rev_per_emp = df['revenue'].iloc[-1] / df['employees'].iloc[-1]
     elif 'revenue' in df.columns and df['employees'].mean() > 0:
         rev_per_emp = df['revenue'].mean() / df['employees'].mean()
     else:
-        # fallback: estimate revenue from output * avg price inferred from data
-        # The original code's fallback was flawed. This is a more robust alternative.
         avg_output = df['output'].mean() if not df.empty else 1
         avg_rev = df['revenue'].mean() if 'revenue' in df.columns and not df['revenue'].empty else avg_output * 100
         avg_emp = df['employees'].mean() if not df['employees'].empty else 1
@@ -305,12 +268,10 @@ if uploaded_file is not None:
 
     st.write(f"Estimated revenue per employee (latest month): {rev_per_emp:,.2f}")
 
-    # per-month cost arrays
     fc_df['overstaff_cost'] = ((fc_df['available_workforce'] - fc_df['required_manpower']).clip(lower=0) * monthly_salary_with_benefits)
     fc_df['understaff_lost_revenue'] = ((fc_df['required_manpower'] - fc_df['available_workforce']).clip(lower=0) * rev_per_emp * lost_sales_factor)
     fc_df['understaff_lost_profit'] = fc_df['understaff_lost_revenue'] * gross_margin
 
-    # aggregate over horizon
     total_overstaff_cost = fc_df['overstaff_cost'].sum()
     total_understaff_lost_revenue = fc_df['understaff_lost_revenue'].sum()
     total_understaff_lost_profit = fc_df['understaff_lost_profit'].sum()
@@ -321,22 +282,29 @@ if uploaded_file is not None:
     col3.metric("Total lost revenue due to shortage", f"{total_understaff_lost_revenue:,.0f}")
     col4.metric("Total lost profit (approx)", f"{total_understaff_lost_profit:,.0f}")
 
+    # -----------------------
+    # Cost Details Table (historical + forecast)
+    # -----------------------
+    hist_table = df[['date','employees']].rename(columns={'employees':'available_workforce'})
+    hist_table['required_manpower'] = np.nan
+    hist_table['gap'] = np.nan
+    hist_table['overstaff_cost'] = np.nan
+    hist_table['understaff_lost_revenue'] = np.nan
+    hist_table['understaff_lost_profit'] = np.nan
+
+    cost_table = pd.concat([hist_table, fc_df[['date','required_manpower','available_workforce','gap','overstaff_cost','understaff_lost_revenue','understaff_lost_profit']]], ignore_index=True)
     st.subheader("Cost details by month")
-    st.dataframe(fc_df[['date','required_manpower','available_workforce','gap','overstaff_cost','understaff_lost_revenue','understaff_lost_profit']].round(2))
+    st.dataframe(cost_table.round(2))
 
-# --------------
-# Interpretation & next steps (Dynamic)
-# --------------
-
+# -----------------------
+# Interpretation & next steps
+# -----------------------
 if uploaded_file is not None and 'fc_df' in locals():
     st.header("4) Interpretation & HR Insights (Dynamic Analysis)")
-
-    # --- Compute key averages ---
     avg_gap = fc_df['gap'].mean()
     avg_required = fc_df['required_manpower'].mean()
     avg_available = fc_df['available_workforce'].mean()
 
-    # --- Determine overall workforce trend ---
     if avg_gap > 0:
         st.subheader("📉 Workforce Shortage Detected")
         st.markdown(f"""
@@ -358,9 +326,7 @@ if uploaded_file is not None and 'fc_df' in locals():
         - Continue monitoring productivity levels and financial performance for early signs of deviation.
         """)
 
-    # --- Financial comparison logic ---
     st.subheader("💰 Financial Risk Assessment")
-
     if total_overstaff_cost > total_understaff_lost_profit:
         st.info(f"""
         The **overstaffing cost ({total_overstaff_cost:,.0f})** exceeds the potential lost profit due to shortages ({total_understaff_lost_profit:,.0f}).
@@ -369,8 +335,7 @@ if uploaded_file is not None and 'fc_df' in locals():
         """)
     elif total_overstaff_cost < total_understaff_lost_profit:
         st.warning(f"""
-        The **lost profit from understaffing ({total_understaff_lost_profit:,.0f})** is higher than overstaffing costs ({total_overstaff_cost:,.0f}).
-        This suggests that having insufficient staff poses a greater financial risk.  
+        The **lost profit from understaffing ({total_understaff_lost_profit:,.0f})** is higher than overstaffing costs ({total_overstaff_cost:,.0f}).  
         **Recommendation:** Plan strategic hiring or temporary staffing to safeguard revenue.
         """)
     else:
@@ -379,7 +344,6 @@ if uploaded_file is not None and 'fc_df' in locals():
         The organization’s workforce strategy appears financially optimized — maintain current levels while monitoring market shifts.
         """)
 
-    # --- Strategic conclusion ---
     st.markdown("---")
     st.markdown("""
     ### 🧭 Managerial Interpretation:

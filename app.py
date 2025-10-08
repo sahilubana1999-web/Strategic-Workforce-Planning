@@ -378,20 +378,20 @@ else:
     The organization’s workforce strategy appears financially optimized — maintain current levels while monitoring market shifts.
     """)
 
-    # --- Strategic conclusion ---
-    st.markdown("---")
-    st.markdown("""
-    ### 🧭 Managerial Interpretation:
-    This AI-driven model automatically tailors insights to your dataset, showing whether your organization faces a **workforce surplus or shortage** and quantifying its **financial implications**.
-    Managers can use this for:
-    - **Hiring & Training Decisions** – Align manpower with forecasted output.
-    - **Cost Control** – Minimize unnecessary labor expenses.
-    - **Scenario Planning** – Test productivity or salary changes and observe impact on future workforce needs.
+# --- Strategic conclusion ---
+st.markdown("---")
+st.markdown("""
+### 🧭 Managerial Interpretation:
+This AI-driven model automatically tailors insights to your dataset, showing whether your organization faces a **workforce surplus or shortage** and quantifying its **financial implications**.
+Managers can use this for:
+- **Hiring & Training Decisions** – Align manpower with forecasted output.
+- **Cost Control** – Minimize unnecessary labor expenses.
+- **Scenario Planning** – Test productivity or salary changes and observe impact on future workforce needs.
     """)
 
-    st.markdown("""
-    **Note on assumptions:** productivity is computed as average monthly output per employee (or can be entered manually). Lost-sales factor and gross margin are user inputs and should be informed by operations data.
-    """)
+st.markdown("""
+**Note on assumptions:** productivity is computed as average monthly output per employee (or can be entered manually). Lost-sales factor and gross margin are user inputs and should be informed by operations data.
+""")
 else:
     st.error("⚠️ You must upload a dataset (CSV) with required columns to continue.")
     # The script now stops here, preventing the NameError from occurring.

@@ -337,6 +337,16 @@ st.header("4) Interpretation & HR Insights (Dynamic Analysis)")
 avg_gap = fc_df['gap'].mean()
 avg_required = fc_df['required_manpower'].mean()
 avg_available = fc_df['available_workforce'].mean()
+# --------------
+# Interpretation & next steps (Dynamic)
+# --------------
+
+st.header("4) Interpretation & HR Insights (Dynamic Analysis)")
+
+# --- Compute key averages ---
+avg_gap = fc_df['gap'].mean()
+avg_required = fc_df['required_manpower'].mean()
+avg_available = fc_df['available_workforce'].mean()
 
 # --- Determine overall workforce trend ---
 if avg_gap > 0:
@@ -380,6 +390,17 @@ else:
     Overstaffing and understaffing costs are currently balanced.
     The organization’s workforce strategy appears financially optimized — maintain current levels while monitoring market shifts.
     """)
+
+# --- Strategic conclusion ---
+st.markdown("---")
+st.markdown("""
+### 🧭 Managerial Interpretation:
+This AI-driven model automatically tailors insights to your dataset, showing whether your organization faces a **workforce surplus or shortage** and quantifying its **financial implications**.
+Managers can use this for:
+- **Hiring & Training Decisions** – Align manpower with forecasted output.
+- **Cost Control** – Minimize unnecessary labor expenses.
+- **Scenario Planning** – Test productivity or salary changes and observe impact on future workforce needs.
+""")
 
 # --- Strategic conclusion ---
 st.markdown("---")

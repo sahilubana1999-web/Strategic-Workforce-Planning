@@ -252,10 +252,13 @@ if uploaded_file is not None:
 
     # compute required manpower per month
     fc_df = fc_df.copy()
-    fc_df['required_manpower'] = (fc_df['yhat_output'] / prod).apply(lambda x: np.nan if x==np.inf else x)
-    # Use actual historical employees for historical months, forecast uses latest known or manual input
-    # For forecasted months in fc_df, we can use the last known employee count from the dataset
-    fc_df['available_workforce'] = df['employees'].iloc[-1]  # keeps existing logic
+    # Merge historical employees into the fc_df
+    # Make sure fc_df includes both historical and forecast rows
+    combined_df = pd.concat([df[['date','employees']], fc_df], ignore_index=True, sort=False)
+
+    # Create available_workforce column as the number of employees in that month
+    combined_df['available_workforce'] = combined_df['employees'].fillna(method='ffill')  # forecast uses last known
+
     fc_df['gap'] = fc_df['required_manpower'] - fc_df['available_workforce']
 
     # -----------------------
